@@ -735,6 +735,16 @@ class AccountingApp {
         input.click();
     }
 
+    clearAssets() {
+        if (confirm('确定清空所有资产数据？')) {
+            localStorage.removeItem('assetData');
+            localStorage.removeItem('assetRecords');
+            this.renderAssets();
+            this.showToast('asset cleared', 'success');
+        }
+    }
+
+
 
     showAssetModal(name, action) {
         this._assetName = name;
