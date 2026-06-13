@@ -19,6 +19,7 @@ class AccountingApp {
         this.updateStatistics();
         this.updateBudgetDisplay();
         this.renderAssets();
+        this.renderAnnual();
     }
 
     // 加载所有数据
@@ -85,19 +86,17 @@ class AccountingApp {
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
             btn.classList.remove('active');
-            if (btn.dataset.tab === tabId) {
-                btn.classList.add('active');
-            }
+            if (btn.dataset.tab === tabId) btn.classList.add('active');
         });
 
         // 更新内容显示
-        const tabPanes = document.querySelectorAll('.tab-pane');
-        tabPanes.forEach(pane => {
-            pane.classList.remove('active');
-            if (pane.id === tabId) {
-                pane.classList.add('active');
-            }
-        });
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(tabId);
+        if (target) target.classList.add('active');
+
+        // 只在记账页显示顶部预算概览
+        const header = document.querySelector('.header');
+        if (header) header.style.display = (tabId === 'tabToday') ? 'block' : 'none';
 
         // 如果切换到月度明细标签，自动查询当前月
         if (tabId === 'tabMonthly') {
@@ -112,6 +111,10 @@ class AccountingApp {
         // 切换到资产标签，渲染资产
         if (tabId === 'tabAssets') {
             this.renderAssets();
+        }
+        // 切换到年费标签
+        if (tabId === 'tabAnnual') {
+            this.renderAnnual();
         }
     }
 
@@ -801,6 +804,89 @@ class AccountingApp {
         container.innerHTML = '<table class="record-table"><thead><tr><th>日期</th><th>资产</th><th>操作</th><th>金额</th><th>备注</th><th>余额</th></tr></thead><tbody>' +
             records.slice(0, 50).map(r => '<tr class="record-row"><td>' + r.date.slice(5) + '</td><td>' + r.name + '</td><td>' + r.action + '</td><td>' + r.amount.toFixed(2) + '</td><td>' + (r.note || '') + '</td><td>' + r.balance.toFixed(2) + '</td></tr>').join('') +
             '</tbody></table>';
+    }
+
+
+    // ===== 年度固定开销 =====
+    loadAnnual() {
+        const d = localStorage.getItem('annualExpenses');
+        return d ? JSON.parse(d) : [];
+    }
+    saveAnnual(list) { localStorage.setItem('annualExpenses', JSON.stringify(list)); }
+
+    showAnnualForm() {
+        document.getElementById('annualName').value = '';
+        document.getElementById('annualAmount').value = '';
+        document.getElementById('annualModal').style.display = 'flex';
+    }
+    closeAnnualForm() { document.getElementById('annualModal').style.display = 'none'; }
+
+    saveAnnual() {
+        const name = document.getElementById('annualName').value.trim();
+        const amount = parseFloat(document.getElementById('annualAmount').value);
+        if (!name || !amount || amount <= 0) { this.showToast('请填写完整', 'error'); return; }
+        const list = this.loadAnnual();
+        list.push({ id: Date.now(), name, amount, paid: false });
+        this.saveAnnual(list);
+        this.closeAnnualForm();
+        this.renderAnnual();
+        this.showToast('added', 'success');
+    }
+
+    toggleAnnual(id) {
+        const list = this.loadAnnual();
+        const item = list.find(x => x.id === id);
+        if (item) { item.paid = !item.paid; this.saveAnnual(list); this.renderAnnual(); }
+    }
+
+    deleteAnnual(id) {
+        const list = this.loadAnnual();
+        const item = list.find(x => x.id === id);
+        if (item && confirm('delete ' + item.name + '?')) {
+            this.saveAnnual(list.filter(x => x.id !== id));
+            this.renderAnnual();
+        }
+    }
+
+    importAnnual() {
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = '.json';
+        input.onchange = (e) => {
+            if (!e.target.files[0]) return;
+            const r = new FileReader();
+            r.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    const list = this.loadAnnual().concat(data.map(x => ({ id: Date.now() + Math.random()*1e6, name: x.name, amount: x.amount, paid: x.paid || false })));
+                    this.saveAnnual(list);
+                    this.renderAnnual();
+                    this.showToast('imported ' + data.length, 'success');
+                } catch (err) { this.showToast('import failed', 'error'); }
+            };
+            r.readAsText(e.target.files[0]);
+        };
+        input.click();
+    }
+
+    renderAnnual() {
+        const list = this.loadAnnual();
+        const container = document.getElementById('annualList');
+        const summary = document.getElementById('annualSummary');
+        if (list.length === 0) {
+            container.innerHTML = '<p class="empty-message">暂无年度开销</p>';
+            summary.style.display = 'none';
+            return;
+        }
+        container.innerHTML = list.map(x => '<div class="annual-item' + (x.paid ? ' paid' : '') + '" onclick="app.toggleAnnual(' + x.id + ')">' +
+            '<div class="annual-left"><span class="annual-check">' + (x.paid ? '✅' : '⬜') + '</span><span class="annual-name">' + x.name + '</span></div>' +
+            '<div style="display:flex;align-items:center;gap:8px;"><span class="annual-amount">¥' + x.amount.toFixed(2) + '</span>' +
+            '<button class="annual-del" onclick="event.stopPropagation();app.deleteAnnual(' + x.id + ')">×</button></div></div>').join('');
+        const total = list.reduce((s,x) => s + x.amount, 0);
+        const paid = list.filter(x => x.paid).reduce((s,x) => s + x.amount, 0);
+        document.getElementById('annualTotal').textContent = '¥' + total.toFixed(2);
+        document.getElementById('annualPaid').textContent = '¥' + paid.toFixed(2) + ' (' + (total>0?(paid/total*100).toFixed(0):0) + '%)';
+        document.getElementById('annualPending').textContent = '¥' + (total - paid).toFixed(2);
+        summary.style.display = 'block';
     }
 
     // 显示Toast提示

@@ -649,3 +649,22 @@ textarea {
 
 .btn-deposit { background: #E8F5E9; color: #388E3C; }
 .btn-withdraw { background: #FFEBEE; color: #E74C3C; }
+
+
+/* 年度固定开销 */
+.annual-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #F0F0F0;
+    cursor: pointer;
+}
+.annual-item:hover { background: #F8F9FF; }
+.annual-item.paid .annual-name { text-decoration: line-through; color: #999; }
+.annual-left { display: flex; align-items: center; gap: 10px; }
+.annual-check { font-size: 18px; }
+.annual-name { font-weight: 500; font-size: 14px; }
+.annual-amount { font-weight: 700; font-size: 15px; }
+.annual-del { background: none; border: none; font-size: 14px; cursor: pointer; padding: 4px; }
+.annual-summary { margin-top: 16px; padding-top: 12px; border-top: 2px solid #E0E0E0; }
