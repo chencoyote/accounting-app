@@ -827,7 +827,7 @@ class AccountingApp {
         if (!name || !amount || amount <= 0) { this.showToast('请填写完整', 'error'); return; }
         const list = this.loadAnnual();
         list.push({ id: Date.now(), name, amount, paid: false });
-        this.saveAnnual(list);
+        localStorage.setItem('annualExpenses', JSON.stringify(list));
         this.closeAnnualForm();
         this.renderAnnual();
         this.showToast('added', 'success');
@@ -836,7 +836,7 @@ class AccountingApp {
     toggleAnnual(id) {
         const list = this.loadAnnual();
         const item = list.find(x => x.id === id);
-        if (item) { item.paid = !item.paid; this.saveAnnual(list); this.renderAnnual(); }
+        if (item) { item.paid = !item.paid; localStorage.setItem('annualExpenses', JSON.stringify(list)); this.renderAnnual(); }
     }
 
     deleteAnnual(id) {
@@ -858,7 +858,7 @@ class AccountingApp {
                 try {
                     const data = JSON.parse(ev.target.result);
                     const list = this.loadAnnual().concat(data.map(x => ({ id: Date.now() + Math.random()*1e6, name: x.name, amount: x.amount, paid: x.paid || false })));
-                    this.saveAnnual(list);
+                    localStorage.setItem('annualExpenses', JSON.stringify(list));
                     this.renderAnnual();
                     this.showToast('imported ' + data.length, 'success');
                 } catch (err) { this.showToast('import failed', 'error'); }
