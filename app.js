@@ -4,7 +4,7 @@ class AccountingApp {
         this.records = [];
         this.budgets = {};
         this.currentType = '支出';
-        this.useCloud = (typeof supabase !== 'undefined' && supabase !== null);
+        this.useCloud = (typeof window._supabase !== 'undefined' && window._supabase !== null);
         this.init();
     }
 
@@ -33,7 +33,7 @@ class AccountingApp {
     async loadCloudData() {
         try {
             // 加载记录
-            const { data: records, error: recordsError } = await supabase
+            const { data: records, error: recordsError } = await window._supabase
                 .from('records')
                 .select('*')
                 .order('date', { ascending: false });
@@ -42,7 +42,7 @@ class AccountingApp {
             this.records = records || [];
 
             // 加载预算
-            const { data: budgets, error: budgetsError } = await supabase
+            const { data: budgets, error: budgetsError } = await window._supabase
                 .from('budgets')
                 .select('*');
             
@@ -731,21 +731,21 @@ class AccountingApp {
         // 删除云端多余的记录
         for (const id of existingIds) {
             if (!this.records.find(r => r.id === id)) {
-                await supabase.from('records').delete().eq('id', id);
+                await window._supabase.from('records').delete().eq('id', id);
             }
         }
 
         // 插入或更新记录
         for (const record of this.records) {
             if (existingIds.has(record.id)) {
-                await supabase.from('records').update(record).eq('id', record.id);
+                await window._supabase.from('records').update(record).eq('id', record.id);
             } else {
-                await supabase.from('records').insert(record);
+                await window._supabase.from('records').insert(record);
             }
         }
 
         // 同步预算
-        await supabase.from('budgets').delete().neq('month', '__none__');
+        await window._supabase.from('budgets').delete().neq('month', '__none__');
         
         const budgetEntries = Object.entries(this.budgets).map(([month, amount]) => ({
             month,
@@ -753,7 +753,7 @@ class AccountingApp {
         }));
         
         if (budgetEntries.length > 0) {
-            await supabase.from('budgets').insert(budgetEntries);
+            await window._supabase.from('budgets').insert(budgetEntries);
         }
     }
 
