@@ -120,9 +120,10 @@ class AccountingApp {
 
     // 设置默认日期为今天
     setTodayDate() {
-        const dateInput = document.getElementById('date');
         const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
+        document.getElementById('date').value = today;
+        const incomeDate = document.getElementById('incomeDate');
+        if (incomeDate) incomeDate.value = today;
     }
 
     // 绑定事件
