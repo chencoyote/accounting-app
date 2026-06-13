@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📱 快速记账</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#4472C4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部：当月预算执行情况 -->
+        <header class="header">
+            <h1>📱 快速记账</h1>
+            <div class="budget-overview">
+                <div class="budget-card">
+                    <div class="budget-item">
+                        <span class="budget-label">月度预算</span>
+                        <span class="budget-value" id="monthlyBudget">¥0.00</span>
+                    </div>
+                    <div class="budget-item">
+                        <span class="budget-label">已用</span>
+                        <span class="budget-value expense" id="budgetUsed">¥0.00</span>
+                    </div>
+                    <div class="budget-item">
+                        <span class="budget-label">剩余</span>
+                        <span class="budget-value" id="budgetRemaining" style="color: #70AD47;">¥0.00</span>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="budgetProgress" style="width: 0%;"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区：标签页内容 -->
+        <div class="tab-content" id="tabContent">
+            <!-- 标签页1：今日记录 -->
+            <div class="tab-pane active" id="tabToday">
+                <!-- 快速记账表单 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>✏️ 快速记账</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="recordForm">
+                            <input type="hidden" id="recordId">
+                            
+                            <!-- 日期选择 -->
+                            <div class="form-group">
+                                <label for="date">📅 日期</label>
+                                <input type="date" id="date" name="date" required>
+                            </div>
+
+                            <!-- 类型选择 -->
+                            <div class="form-group">
+                                <label>💰 类型</label>
+                                <div class="button-group">
+                                    <button type="button" class="btn-type active" data-type="支出">支出</button>
+                                    <button type="button" class="btn-type" data-type="收入">收入</button>
+                                </div>
+                                <input type="hidden" id="type" name="type" value="支出" required>
+                            </div>
+
+                            <!-- 分类选择 -->
+                            <div class="form-group">
+                                <label for="category">📂 分类</label>
+                                <select id="category" name="category" required>
+                                    <option value="">请选择分类</option>
+                                    <!-- 支出分类 -->
+                                    <optgroup label="支出分类" id="expenseCategories">
+                                        <option value="生活支出">生活支出</option>
+                                        <option value="话费网费">话费网费</option>
+                                        <option value="油费">油费</option>
+                                        <option value="米果伙食费">米果伙食费</option>
+                                        <option value="米果兴趣班">米果兴趣班</option>
+                                        <option value="零花钱">零花钱</option>
+                                        <option value="房贷">房贷</option>
+                                        <option value="其他">其他</option>
+                                    </optgroup>
+                                    <!-- 收入分类 -->
+                                    <optgroup label="收入分类" id="incomeCategories" style="display:none;">
+                                        <option value="陈都行工资">陈都行工资</option>
+                                        <option value="米小桃工资">米小桃工资</option>
+                                        <option value="额外收入">额外收入</option>
+                                        <option value="其他">其他</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <!-- 金额输入 -->
+                            <div class="form-group">
+                                <label for="amount">💵 金额（元）</label>
+                                <input type="number" id="amount" name="amount" step="0.01" min="0" placeholder="0.00" required>
+                            </div>
+
+                            <!-- 备注输入 -->
+                            <div class="form-group">
+                                <label for="note">📝 备注（可选）</label>
+                                <textarea id="note" name="note" rows="2" placeholder="记录详细信息..."></textarea>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="form-group">
+                                <button type="submit" class="btn-submit">✅ 保存记录</button>
+                                <button type="button" class="btn-submit" id="cancelEdit" style="display:none; background: linear-gradient(135deg, #95A5A6, #7F8C8D); margin-top: 10px;">❌ 取消编辑</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 今日记录列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📊 今日记录</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="todayRecords">
+                            <p class="empty-message">今天还没有记录</p>
+                        </div>
+                        <div class="summary">
+                            <div class="summary-item">
+                                <span class="label">今日支出：</span>
+                                <span class="amount expense" id="todayExpense">¥0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">今日收入：</span>
+                                <span class="amount income" id="todayIncome">¥0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签页2：月度明细 -->
+            <div class="tab-pane" id="tabMonthly">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📊 月度明细</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="queryMonth">📅 选择月份</label>
+                            <input type="month" id="queryMonth" name="queryMonth">
+                        </div>
+                        <div id="monthlyDetail">
+                            <p class="empty-message">请选择月份查看明细</p>
+                        </div>
+                        <div class="monthly-summary" id="monthlySummary" style="display:none;">
+                            <div class="summary-item">
+                                <span class="label">总支出：</span>
+                                <span class="amount expense" id="detailExpense">¥0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">总收入：</span>
+                                <span class="amount income" id="detailIncome">¥0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">结余：</span>
+                                <span class="amount" id="detailBalance">¥0.00</span>
+                            </div>
+                        </div>
+                        <div class="category-stats" id="categoryStats" style="display:none;">
+                            <h3 style="margin-top: 20px; margin-bottom: 12px; color: #4472C4;">📊 分类统计</h3>
+                            <div id="expenseCategoryStats"></div>
+                            <div id="incomeCategoryStats" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签页3：数据统计 -->
+            <div class="tab-pane" id="tabStats">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📈 本月统计</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-label">本月支出</span>
+                                <span class="stat-value expense" id="monthExpense">¥0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">本月收入</span>
+                                <span class="stat-value income" id="monthIncome">¥0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">结余</span>
+                                <span class="stat-value" id="monthBalance">¥0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签页4：设置 -->
+            <div class="tab-pane" id="tabSettings">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>⚙️ 设置</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="settings-section">
+                            <h3>💰 预算管理</h3>
+                            <button class="btn-settings" onclick="app.showBudgetModal()" style="background: linear-gradient(135deg, #4472C4, #5B8BD4); color: white; border: none;">✏️ 设置预算</button>
+                        </div>
+                        <div class="settings-section">
+                            <h3>📂 数据管理</h3>
+                            <button class="btn-settings" onclick="app.exportToExcel()">📥 导出数据</button>
+                            <button class="btn-settings" onclick="app.importFromJSON()">📂 导入数据</button>
+                        </div>
+                        <div class="settings-section">
+                            <h3>ℹ️ 关于</h3>
+                            <p style="font-size: 14px; color: #7F8C8D;">版本：1.0.0</p>
+                            <p style="font-size: 14px; color: #7F8C8D;">本地存储，数据不会丢失</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部：标签页导航 -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="tabToday">
+                <span class="tab-icon">📊</span>
+                <span class="tab-text">今日</span>
+            </button>
+            <button class="tab-btn" data-tab="tabMonthly">
+                <span class="tab-icon">📅</span>
+                <span class="tab-text">月度</span>
+            </button>
+            <button class="tab-btn" data-tab="tabStats">
+                <span class="tab-icon">📈</span>
+                <span class="tab-text">统计</span>
+            </button>
+            <button class="tab-btn" data-tab="tabSettings">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-text">设置</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 预算设置弹窗 -->
+    <div id="budgetModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>💰 设置预算</h2>
+                <button class="modal-close" onclick="app.closeBudgetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="budgetType">预算类型</label>
+                    <select id="budgetType" onchange="app.toggleBudgetType()">
+                        <option value="default">年度默认预算</option>
+                        <option value="monthly">本月单独设置</option>
+                    </select>
+                </div>
+                <div class="form-group" id="defaultBudgetGroup">
+                    <label for="defaultBudget">年度默认预算（元/月）</label>
+                    <input type="number" id="defaultBudget" step="0.01" min="0" placeholder="0.00">
+                    <small style="color: #7F8C8D; font-size: 12px;">设置后，所有月份默认使用此预算</small>
+                </div>
+                <div class="form-group" id="monthlyBudgetGroup" style="display:none;">
+                    <label for="monthlyBudgetInput">本月预算（元）</label>
+                    <input type="number" id="monthlyBudgetInput" step="0.01" min="0" placeholder="0.00">
+                    <small style="color: #7F8C8D; font-size: 12px;">仅本月使用此预算</small>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn-submit" onclick="app.saveBudget()">✅ 保存预算</button>
+                    <button type="button" class="btn-settings" onclick="app.resetMonthBudget()" style="margin-top: 10px;">🔄 重置本月预算</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
