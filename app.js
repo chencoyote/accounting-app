@@ -367,7 +367,7 @@ class AccountingApp {
         if (todayRecords.length === 0) {
             container.innerHTML = '<p class="empty-message">今天还没有记录</p>';
         } else {
-            container.innerHTML = todayRecords.map(record => this.createRecordHTML(record)).join('');
+            container.innerHTML = this.buildTable(todayRecords, false, false);
         }
 
         // 计算今日统计
@@ -383,25 +383,41 @@ class AccountingApp {
         document.getElementById('todayIncome').textContent = `¥${todayIncome.toFixed(2)}`;
     }
 
-    // 创建记录HTML
-    createRecordHTML(record) {
+    // 创建记录HTML - 表格行样式
+    createRecordHTML(record, showDate = false, showType = false) {
         const typeClass = record.type === '支出' ? 'expense' : 'income';
         const sign = record.type === '支出' ? '-' : '+';
         
         return `
-            <div class="record-item" data-id="${record.id}">
-                <div class="record-info">
-                    <div class="record-category">${record.category}</div>
-                    ${record.note ? `<div class="record-note">${record.note}</div>` : ''}
-                </div>
-                <div class="record-right">
-                    <div class="record-amount ${typeClass}">${sign}¥${record.amount.toFixed(2)}</div>
-                    <div class="record-actions">
-                        <button class="btn-edit" onclick="app.editRecord(${record.id})" title="编辑">✏️</button>
-                        <button class="btn-delete" onclick="app.deleteRecord(${record.id})" title="删除">🗑️</button>
-                    </div>
-                </div>
-            </div>
+            <tr class="record-row">
+                ${showDate ? `<td class="col-date">${record.date.slice(5)}</td>` : ''}
+                ${showType ? `<td class="col-type"><span class="tag ${typeClass}">${record.type}</span></td>` : ''}
+                <td class="col-category">${record.category}</td>
+                <td class="col-amount ${typeClass}">${sign}¥${record.amount.toFixed(2)}</td>
+                <td class="col-note">${record.note || ''}</td>
+                <td class="col-actions">
+                    <button class="btn-edit" onclick="app.editRecord(${record.id})">✏️</button>
+                    <button class="btn-delete" onclick="app.deleteRecord(${record.id})">🗑️</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // 构建表格HTML
+    buildTable(records, showDate, showType) {
+        if (records.length === 0) {
+            return '<p class="empty-message">暂无记录</p>';
+        }
+        let cols = '';
+        if (showDate) cols += '<th>日期</th>';
+        if (showType) cols += '<th>类型</th>';
+        cols += '<th>分类</th><th>金额</th><th>备注</th><th></th>';
+        
+        return `
+            <table class="record-table">
+                <thead><tr>${cols}</tr></thead>
+                <tbody>${records.map(r => this.createRecordHTML(r, showDate, showType)).join('')}</tbody>
+            </table>
         `;
     }
 
@@ -450,8 +466,8 @@ class AccountingApp {
             return;
         }
 
-        // 显示明细列表
-        container.innerHTML = monthRecords.map(record => this.createRecordHTML(record)).join('');
+        // 显示明细表格
+        container.innerHTML = this.buildTable(monthRecords, true, true);
         
         // 计算并显示统计
         const monthExpense = monthRecords
