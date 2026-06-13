@@ -881,8 +881,8 @@ class AccountingApp {
     deleteAnnual(id) {
         const list = this.loadAnnual();
         const item = list.find(x => x.id === id);
-        if (item && confirm('delete ' + item.name + '?')) {
-            this.saveAnnual(list.filter(x => x.id !== id));
+        if (item && confirm('删除 ' + item.name + '？')) {
+            localStorage.setItem('annualExpenses', JSON.stringify(list.filter(x => x.id !== id)));
             this.renderAnnual();
         }
     }
