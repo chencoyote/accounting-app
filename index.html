@@ -47,6 +47,7 @@
                     <div class="card-body">
                         <form id="recordForm">
                             <input type="hidden" id="recordId">
+                            <input type="hidden" id="type" name="type" value="支出">
                             
                             <!-- 日期选择 -->
                             <div class="form-group">
@@ -54,39 +55,19 @@
                                 <input type="date" id="date" name="date" required>
                             </div>
 
-                            <!-- 类型选择 -->
-                            <div class="form-group">
-                                <label>💰 类型</label>
-                                <div class="button-group">
-                                    <button type="button" class="btn-type active" data-type="支出">支出</button>
-                                    <button type="button" class="btn-type" data-type="收入">收入</button>
-                                </div>
-                                <input type="hidden" id="type" name="type" value="支出" required>
-                            </div>
-
                             <!-- 分类选择 -->
                             <div class="form-group">
                                 <label for="category">📂 分类</label>
                                 <select id="category" name="category" required>
                                     <option value="">请选择分类</option>
-                                    <!-- 支出分类 -->
-                                    <optgroup label="支出分类" id="expenseCategories">
-                                        <option value="生活支出">生活支出</option>
-                                        <option value="话费网费">话费网费</option>
-                                        <option value="油费">油费</option>
-                                        <option value="米果伙食费">米果伙食费</option>
-                                        <option value="米果兴趣班">米果兴趣班</option>
-                                        <option value="零花钱">零花钱</option>
-                                        <option value="房贷">房贷</option>
-                                        <option value="其他">其他</option>
-                                    </optgroup>
-                                    <!-- 收入分类 -->
-                                    <optgroup label="收入分类" id="incomeCategories" style="display:none;">
-                                        <option value="陈都行工资">陈都行工资</option>
-                                        <option value="米小桃工资">米小桃工资</option>
-                                        <option value="额外收入">额外收入</option>
-                                        <option value="其他">其他</option>
-                                    </optgroup>
+                                    <option value="生活支出">生活支出</option>
+                                    <option value="话费网费">话费网费</option>
+                                    <option value="油费">油费</option>
+                                    <option value="米果伙食费">米果伙食费</option>
+                                    <option value="米果兴趣班">米果兴趣班</option>
+                                    <option value="零花钱">零花钱</option>
+                                    <option value="房贷">房贷</option>
+                                    <option value="其他">其他</option>
                                 </select>
                             </div>
 
@@ -104,7 +85,7 @@
 
                             <!-- 提交按钮 -->
                             <div class="form-group">
-                                <button type="submit" class="btn-submit">✅ 保存记录</button>
+                                <button type="submit" class="btn-submit">✅ 记一笔支出</button>
                                 <button type="button" class="btn-submit" id="cancelEdit" style="display:none; background: linear-gradient(135deg, #95A5A6, #7F8C8D); margin-top: 10px;">❌ 取消编辑</button>
                             </div>
                         </form>
@@ -173,9 +154,45 @@
 
             <!-- 标签页3：收入 -->
             <div class="tab-pane" id="tabIncome">
+                <!-- 收入录入表单 -->
                 <div class="card">
                     <div class="card-header">
-                        <h2>💰 收入记录</h2>
+                        <h2>💰 记一笔收入</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="incomeForm">
+                            <div class="form-group">
+                                <label for="incomeDate">📅 日期</label>
+                                <input type="date" id="incomeDate" name="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="incomeCategory">📂 分类</label>
+                                <select id="incomeCategory" name="category" required>
+                                    <option value="">请选择分类</option>
+                                    <option value="陈都行工资">陈都行工资</option>
+                                    <option value="米小桃工资">米小桃工资</option>
+                                    <option value="额外收入">额外收入</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="incomeAmount">💵 金额（元）</label>
+                                <input type="number" id="incomeAmount" name="amount" step="0.01" min="0" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="incomeNote">📝 备注（可选）</label>
+                                <textarea id="incomeNote" name="note" rows="2" placeholder="记录详细信息..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn-submit">💰 记一笔收入</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 收入记录 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 收入记录</h2>
                     </div>
                     <div class="card-body">
                         <div class="form-group">

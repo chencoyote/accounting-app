@@ -119,26 +119,21 @@ class AccountingApp {
 
     // 绑定事件
     bindEvents() {
-        // 类型选择按钮
-        const typeButtons = document.querySelectorAll('.btn-type');
-        typeButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.switchType(e.target.dataset.type);
-            });
-        });
-
-        // 表单提交
+        // 支出表单提交
         const form = document.getElementById('recordForm');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.saveRecord();
         });
 
-        // 分类选择变化
-        const categorySelect = document.getElementById('category');
-        categorySelect.addEventListener('change', (e) => {
-            // 可以在这里添加额外逻辑
-        });
+        // 收入表单提交
+        const incomeForm = document.getElementById('incomeForm');
+        if (incomeForm) {
+            incomeForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveIncomeRecord();
+            });
+        }
     }
 
     // 绑定查询事件
@@ -198,110 +193,92 @@ class AccountingApp {
         }
     }
 
-    // 保存记录
+    // 保存支出记录
     saveRecord() {
         const form = document.getElementById('recordForm');
-        const formData = new FormData(form);
-        
         const recordId = document.getElementById('recordId') ? document.getElementById('recordId').value : null;
-        
+        const record = this.collectFormData(form, recordId, '支出');
+        if (!record) return;
+        this.processRecord(record, recordId);
+    }
+
+    // 保存收入记录
+    saveIncomeRecord() {
+        const form = document.getElementById('incomeForm');
+        const record = this.collectFormData(form, null, '收入');
+        if (!record) return;
+        this.processRecord(record, null);
+        form.reset();
+        document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0];
+    }
+
+    // 收集表单数据
+    collectFormData(form, recordId, type) {
+        const data = new FormData(form);
         const record = {
             id: recordId ? parseInt(recordId) : Date.now(),
-            date: formData.get('date'),
-            type: formData.get('type'),
-            category: formData.get('category'),
-            amount: parseFloat(formData.get('amount')),
-            note: formData.get('note'),
+            date: data.get('date'),
+            type: type,
+            category: data.get('category'),
+            amount: parseFloat(data.get('amount')),
+            note: data.get('note') || '',
             timestamp: new Date().toISOString()
         };
-
-        // 验证
-        if (!record.date || !record.type || !record.category || !record.amount) {
+        if (!record.date || !record.category || !record.amount) {
             this.showToast('❌ 请填写完整信息', 'error');
-            return;
+            return null;
         }
+        return record;
+    }
 
+    // 处理记录（新增或更新）
+    processRecord(record, recordId) {
         if (recordId) {
-            // 编辑模式：更新已有记录
             const index = this.records.findIndex(r => r.id === record.id);
-            if (index !== -1) {
-                this.records[index] = record;
-            }
+            if (index !== -1) this.records[index] = record;
             this.showToast('✅ 记录修改成功！', 'success');
         } else {
-            // 新增模式：添加新记录
             this.records.push(record);
             this.showToast('✅ 记录保存成功！', 'success');
         }
-
-        // 保存数据
         this.persistData();
-        
-        // 更新界面
         this.renderTodayRecords();
         this.updateStatistics();
-        this.updateBudgetDisplay();
-        
-        // 如果月度明细标签正在显示，也更新它
-        const monthlyTab = document.getElementById('tabMonthly');
-        if (monthlyTab.classList.contains('active')) {
-            const queryMonth = document.getElementById('queryMonth').value;
-            this.queryMonthlyDetail(queryMonth);
-        }
-        
-        // 重置表单（保留日期和类型）
+        const qm = document.getElementById('queryMonth');
+        if (qm && qm.value) this.queryMonthlyDetail(qm.value);
+        const im = document.getElementById('incomeMonth');
+        if (im && im.value) this.loadIncomeRecords(im.value);
         this.resetForm();
     }
 
     // 编辑记录
     editRecord(id) {
         const record = this.records.find(r => r.id === id);
-        if (!record) {
-            this.showToast('❌ 记录不存在', 'error');
-            return;
-        }
+        if (!record) { this.showToast('❌ 记录不存在', 'error'); return; }
 
-        // 填充表单
-        document.getElementById('date').value = record.date;
-        document.getElementById('type').value = record.type;
-        this.switchType(record.type);
-        document.getElementById('category').value = record.category;
-        document.getElementById('amount').value = record.amount;
-        document.getElementById('note').value = record.note || '';
+        const isIncome = record.type === '收入';
+        const form = isIncome ? 'incomeForm' : 'recordForm';
+        document.getElementById(isIncome ? 'incomeDate' : 'date').value = record.date;
+        document.getElementById(isIncome ? 'incomeCategory' : 'category').value = record.category;
+        document.getElementById(isIncome ? 'incomeAmount' : 'amount').value = record.amount;
+        document.getElementById(isIncome ? 'incomeNote' : 'note').value = record.note || '';
 
-        // 添加隐藏字段存储记录ID
         let recordIdInput = document.getElementById('recordId');
         if (!recordIdInput) {
             recordIdInput = document.createElement('input');
             recordIdInput.type = 'hidden';
             recordIdInput.id = 'recordId';
-            document.getElementById('recordForm').appendChild(recordIdInput);
+            document.getElementById(form).appendChild(recordIdInput);
         }
         recordIdInput.value = id;
 
-        // 修改提交按钮文本
-        const submitBtn = document.querySelector('.btn-submit');
+        const submitBtn = document.getElementById(form).querySelector('.btn-submit');
         submitBtn.textContent = '✅ 更新记录';
         submitBtn.style.background = 'linear-gradient(135deg, #F39C12, #F1C40F)';
 
-        // 添加取消按钮
-        let cancelBtn = document.getElementById('cancelEdit');
-        if (!cancelBtn) {
-            cancelBtn = document.createElement('button');
-            cancelBtn.type = 'button';
-            cancelBtn.id = 'cancelEdit';
-            cancelBtn.className = 'btn-submit';
-            cancelBtn.style.background = 'linear-gradient(135deg, #95A5A6, #7F8C8D)';
-            cancelBtn.style.marginTop = '10px';
-            cancelBtn.textContent = '❌ 取消编辑';
-            cancelBtn.onclick = () => this.cancelEdit();
-            document.getElementById('recordForm').appendChild(cancelBtn);
-        }
-        cancelBtn.style.display = 'block';
-
-        // 滚动到表单位置
-        document.getElementById('recordForm').scrollIntoView({ behavior: 'smooth' });
-        
+        // 切换到对应标签
+        this.switchTab(isIncome ? 'tabIncome' : 'tabToday');
+        document.getElementById(form).scrollIntoView({ behavior: 'smooth' });
         this.showToast('📝 正在编辑记录...', 'info');
     }
 
@@ -316,25 +293,10 @@ class AccountingApp {
         const form = document.getElementById('recordForm');
         form.reset();
         this.setTodayDate();
-        document.getElementById('type').value = this.currentType;
-        this.switchType(this.currentType);
-
-        // 移除记录ID
-        const recordIdInput = document.getElementById('recordId');
-        if (recordIdInput) {
-            recordIdInput.value = '';
-        }
-
-        // 恢复提交按钮
-        const submitBtn = document.querySelector('.btn-submit');
-        submitBtn.textContent = '✅ 保存记录';
+        document.getElementById('recordId').value = '';
+        const submitBtn = form.querySelector('.btn-submit');
+        submitBtn.textContent = '✅ 记一笔支出';
         submitBtn.style.background = 'linear-gradient(135deg, #70AD47, #8BC34A)';
-
-        // 隐藏取消按钮
-        const cancelBtn = document.getElementById('cancelEdit');
-        if (cancelBtn) {
-            cancelBtn.style.display = 'none';
-        }
     }
 
     // 删除记录
