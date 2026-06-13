@@ -788,18 +788,29 @@ class AccountingApp {
         input.accept = '.json';
         input.onchange = (e) => {
             const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
                     const importedRecords = JSON.parse(event.target.result);
+                    if (!Array.isArray(importedRecords) || importedRecords.length === 0) {
+                        this.showToast('❌ 文件格式错误：需要JSON数组', 'error');
+                        return;
+                    }
+                    // 为导入的记录生成新ID
+                    for (const r of importedRecords) {
+                        r.id = Date.now() + Math.floor(Math.random() * 100000);
+                        r.timestamp = new Date().toISOString();
+                    }
                     this.records = this.records.concat(importedRecords);
                     this.persistData();
                     this.renderTodayRecords();
                     this.updateStatistics();
                     this.updateBudgetDisplay();
-                    this.showToast('📂 数据导入成功！', 'success');
+                    this.showToast('📂 数据导入成功！' + importedRecords.length + '条', 'success');
                 } catch (error) {
-                    this.showToast('❌ 导入失败，文件格式错误', 'error');
+                    console.error('导入错误:', error);
+                    this.showToast('❌ 导入失败：' + error.message, 'error');
                 }
             };
             reader.readAsText(file);
