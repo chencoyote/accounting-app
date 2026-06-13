@@ -55,6 +55,28 @@ class AccountingApp {
                 this.budgets[b.month] = b.amount;
             });
 
+            // 加载资产
+            const { data: cloudAssets } = await window._supabase.from('assets').select('*');
+            if (cloudAssets && cloudAssets.length > 0) {
+                const localAssets = JSON.parse(localStorage.getItem('assetData') || '{}');
+                cloudAssets.forEach(a => { if (!localAssets[a.name]) localAssets[a.name] = a.amount; });
+                localStorage.setItem('assetData', JSON.stringify(localAssets));
+            }
+            // 加载资产变动记录
+            const { data: cloudAssetRecs } = await window._supabase.from('asset_records').select('*').order('date', { ascending: false });
+            if (cloudAssetRecs && cloudAssetRecs.length > 0) {
+                const localAR = JSON.parse(localStorage.getItem('assetRecords') || '[]');
+                const merged = cloudAssetRecs.concat(localAR.filter(lr => !cloudAssetRecs.find(cr => cr.date === lr.date && cr.amount === lr.amount)));
+                localStorage.setItem('assetRecords', JSON.stringify(merged));
+            }
+            // 加载年费
+            const { data: cloudAnnual } = await window._supabase.from('annual_expenses').select('*');
+            if (cloudAnnual && cloudAnnual.length > 0) {
+                const localAnn = JSON.parse(localStorage.getItem('annualExpenses') || '[]');
+                const mergedAnn = cloudAnnual.concat(localAnn.filter(la => !cloudAnnual.find(ca => ca.id === la.id)));
+                localStorage.setItem('annualExpenses', JSON.stringify(mergedAnn));
+            }
+
             console.log(`✅ 云端数据加载成功：${this.records.length}条记录`);
         } catch (error) {
             console.error('❌ 云端数据加载失败，回退到本地存储：', error);
@@ -974,6 +996,30 @@ class AccountingApp {
         await window._supabase.from('budgets').delete().neq('month', '__none__');
         const entries = Object.entries(this.budgets).map(([m, a]) => ({ month: m, amount: a }));
         if (entries.length > 0) await window._supabase.from('budgets').insert(entries);
+
+        // 4. 同步资产
+        const assetData = JSON.parse(localStorage.getItem('assetData') || '{}');
+        await window._supabase.from('assets').delete().neq('name', '__none__');
+        const assetRows = Object.entries(assetData).map(([name, amount]) => ({ name, amount }));
+        if (assetRows.length > 0) await window._supabase.from('assets').insert(assetRows);
+
+        // 5. 同步资产变动记录
+        const assetRecs = JSON.parse(localStorage.getItem('assetRecords') || '[]');
+        await window._supabase.from('asset_records').delete().neq('name', '__none__');
+        if (assetRecs.length > 0) {
+            for (let i = 0; i < assetRecs.length; i += 80) {
+                await window._supabase.from('asset_records').insert(assetRecs.slice(i, i + 80));
+            }
+        }
+
+        // 6. 同步年费
+        const annualData = JSON.parse(localStorage.getItem('annualExpenses') || '[]');
+        await window._supabase.from('annual_expenses').delete().neq('name', '__none__');
+        if (annualData.length > 0) {
+            for (let i = 0; i < annualData.length; i += 80) {
+                await window._supabase.from('annual_expenses').insert(annualData.slice(i, i + 80));
+            }
+        }
     }
 
     // 保存记录到本地
