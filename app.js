@@ -820,6 +820,7 @@ class AccountingApp {
             '<div class="modal-body">' +
             '<div class="form-group"><label>项目名称</label><input type="text" id="annualName" placeholder="如：车险、物业费"></div>' +
             '<div class="form-group"><label>金额（元）</label><input type="number" id="annualAmount" step="0.01" min="0" placeholder="0.00"></div>' +
+            '<div class="form-group"><label>支付来源</label><select id="annualSource"><option value="">请选择</option><option value="备用金">💰 备用金</option><option value="固定存款">💳 固定存款</option></select></div>' +
             '<div class="form-group"><button class="btn-submit" onclick="app.saveAnnual()">确认</button></div>' +
             '</div>';
         document.getElementById('annualModal').style.display = 'flex';
@@ -829,53 +830,37 @@ class AccountingApp {
     saveAnnual() {
         const name = document.getElementById('annualName').value.trim();
         const amount = parseFloat(document.getElementById('annualAmount').value);
-        if (!name || !amount || amount <= 0) { this.showToast('请填写完整', 'error'); return; }
+        const source = document.getElementById('annualSource').value;
+        if (!name || !amount || amount <= 0 || !source) { this.showToast('请填写完整', 'error'); return; }
+        
+        const assets = this.loadAssets();
+        const cur = assets[source] || 0;
+        if (cur < amount) { this.showToast(source + '余额不足(¥' + cur.toFixed(2) + ')', 'error'); return; }
+        assets[source] = cur - amount;
+        this.saveAssets(assets);
+        
         const list = this.loadAnnual();
-        list.push({ id: Date.now(), name, amount, paid: false });
+        list.push({ id: Date.now(), name, amount, source, date: new Date().toISOString().slice(0,10) });
         localStorage.setItem('annualExpenses', JSON.stringify(list));
         this.closeAnnualForm();
-        this.renderAnnual();
-        this.showToast('added', 'success');
+        this.renderAnnual(); this.renderAssets();
+        this.showToast('已添加: ' + name + ' ¥' + amount.toFixed(2), 'success');
     }
 
-    toggleAnnual(id) {
+    deleteAnnual(id) {
         const list = this.loadAnnual();
         const item = list.find(x => x.id === id);
         if (!item) return;
-        if (item.paid) {
-            // 取消支付，退回资产
+        if (confirm('删除并退回 ' + item.name + ' ¥' + item.amount.toFixed(2) + ' 到' + (item.source||'资产') + '？')) {
+            // 退回资产
             if (item.source) {
                 const assets = this.loadAssets();
                 assets[item.source] = (assets[item.source] || 0) + item.amount;
                 this.saveAssets(assets);
             }
-            item.paid = false; item.source = null; item.date = null;
-            localStorage.setItem('annualExpenses', JSON.stringify(list));
+            localStorage.setItem('annualExpenses', JSON.stringify(list.filter(x => x.id !== id)));
             this.renderAnnual(); this.renderAssets();
-            this.showToast('已取消支付', 'info');
-        } else {
-            const src = prompt('支付来源：\n1=备用金  2=固定存款\n请输入1或2：');
-            if (src === '1') this.payThis(item, '备用金');
-            else if (src === '2') this.payThis(item, '固定存款');
-            else if (src) this.showToast('请输入1或2', 'error');
         }
-    }
-
-    payThis(item, source) {
-        const assets = this.loadAssets();
-        const cur = assets[source] || 0;
-        if (cur < item.amount) {
-            this.showToast(source + '余额不足(剩余' + cur.toFixed(2) + ')', 'error');
-            return;
-        }
-        assets[source] = cur - item.amount;
-        this.saveAssets(assets);
-        const list = this.loadAnnual();
-        const it = list.find(x => x.id === item.id);
-        if (it) { it.paid = true; it.source = source; it.date = new Date().toISOString().slice(0,10); }
-        localStorage.setItem('annualExpenses', JSON.stringify(list));
-        this.renderAnnual(); this.renderAssets();
-        this.showToast(source + '支付 ' + item.amount.toFixed(2), 'success');
     }
 
     deleteAnnual(id) {
@@ -916,152 +901,13 @@ class AccountingApp {
             summary.style.display = 'none';
             return;
         }
-        container.innerHTML = list.map(x => '<div class="annual-item' + (x.paid ? ' paid' : '') + '" onclick="app.toggleAnnual(' + x.id + ')">' +
-            '<div class="annual-left"><span class="annual-check">' + (x.paid ? '✅' : '⬜') + '</span><span class="annual-name">' + x.name + '</span></div>' +
+        container.innerHTML = list.map(x => '<div class="annual-item">' +
+            '<div class="annual-left"><div><span class="annual-name">' + x.name + '</span>' +
+            '<span style="font-size:11px;color:#999;display:block;">' + (x.source||'') + ' ' + (x.date||'').slice(5) + '</span></div></div>' +
             '<div style="display:flex;align-items:center;gap:8px;"><span class="annual-amount">¥' + x.amount.toFixed(2) + '</span>' +
             '<button class="annual-del" onclick="event.stopPropagation();app.deleteAnnual(' + x.id + ')">×</button></div></div>').join('');
         const total = list.reduce((s,x) => s + x.amount, 0);
-        const paid = list.filter(x => x.paid).reduce((s,x) => s + x.amount, 0);
         document.getElementById('annualTotal').textContent = '¥' + total.toFixed(2);
-        document.getElementById('annualPaid').textContent = '¥' + paid.toFixed(2) + ' (' + (total>0?(paid/total*100).toFixed(0):0) + '%)';
-        document.getElementById('annualPending').textContent = '¥' + (total - paid).toFixed(2);
         summary.style.display = 'block';
     }
 
-    // 显示Toast提示
-    showToast(message, type = 'info') {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'toast show';
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3000);
-    }
-
-    // 加载记录（本地）
-    loadRecords() {
-        const records = localStorage.getItem('accountingRecords');
-        return records ? JSON.parse(records) : [];
-    }
-
-    // 加载预算（本地）
-    loadBudgets() {
-        const budgets = localStorage.getItem('monthlyBudgets');
-        return budgets ? JSON.parse(budgets) : {};
-    }
-
-    // 保存数据（云端+本地）
-    async persistData() {
-        // 始终保存在本地作为备份
-        this.saveRecordsToLocal();
-        this.saveBudgetsToLocal();
-
-        // 如果连接了云端，异步同步
-        if (this.useCloud) {
-            try {
-                await this.syncToCloud();
-            } catch (error) {
-                console.error('❌ 云端同步失败（数据已保存在本地）：', error);
-            }
-        }
-    }
-
-    // 同步数据到云端
-        async syncToCloud() {
-        const BATCH_SIZE = 80;
-
-        // 1. 清除云端旧数据
-        const { data: old } = await window._supabase.from('records').select('id');
-        if (old && old.length > 0) {
-            const ids = old.map(r => r.id);
-            for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-                await window._supabase.from('records').delete().in('id', ids.slice(i, i + BATCH_SIZE));
-            }
-        }
-
-        // 2. 批量插入新数据
-        if (this.records.length > 0) {
-            for (let i = 0; i < this.records.length; i += BATCH_SIZE) {
-                await window._supabase.from('records').insert(this.records.slice(i, i + BATCH_SIZE));
-            }
-        }
-
-        // 3. 同步预算
-        await window._supabase.from('budgets').delete().neq('month', '__none__');
-        const entries = Object.entries(this.budgets).map(([m, a]) => ({ month: m, amount: a }));
-        if (entries.length > 0) await window._supabase.from('budgets').insert(entries);
-    }
-
-    // 保存记录到本地
-    saveRecordsToLocal() {
-        localStorage.setItem('accountingRecords', JSON.stringify(this.records));
-    }
-
-    // 保存预算到本地
-    saveBudgetsToLocal() {
-        localStorage.setItem('monthlyBudgets', JSON.stringify(this.budgets));
-    }
-
-    // 导出数据为JSON
-    exportToExcel() {
-        const dataStr = JSON.stringify(this.records, null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
-        
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `记账数据_${new Date().toISOString().slice(0,10)}.json`;
-        link.click();
-        
-        this.showToast('📥 数据已导出为JSON文件', 'info');
-    }
-
-    // 从JSON文件导入数据
-        importFromJSON() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const raw = JSON.parse(event.target.result);
-                    if (!Array.isArray(raw) || raw.length === 0) {
-                        this.showToast('文件格式错误', 'error');
-                        return;
-                    }
-                    const importedRecords = raw
-                        .filter(r => r.date && r.type && r.category && r.amount != null)
-                        .map((r, i) => ({
-                            id: Date.now() * 1000 + i,
-                            date: String(r.date).slice(0, 10),
-                            type: r.type,
-                            category: r.category,
-                            amount: parseFloat(r.amount),
-                            note: String(r.note || ''),
-                            timestamp: new Date().toISOString()
-                        }));
-                    this.records = this.records.concat(importedRecords);
-                    this.persistData();
-                    this.renderTodayRecords();
-                    this.updateStatistics();
-                    this.updateBudgetDisplay();
-                    this.showToast('导入成功 ' + importedRecords.length + '条', 'success');
-                } catch (error) {
-                    console.error('导入错误:', error);
-                    this.showToast('导入失败: ' + error.message, 'error');
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    }}
-
-// 初始化应用
-let app;
-document.addEventListener('DOMContentLoaded', () => {
-    app = new AccountingApp();
-});
