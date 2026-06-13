@@ -815,8 +815,13 @@ class AccountingApp {
     saveAnnual(list) { localStorage.setItem('annualExpenses', JSON.stringify(list)); }
 
     showAnnualForm() {
-        document.getElementById('annualName').value = '';
-        document.getElementById('annualAmount').value = '';
+        const mc = document.querySelector('#annualModal .modal-content');
+        mc.innerHTML = '<div class="modal-header"><h2>新增年度开销</h2><button class="modal-close" onclick="app.closeAnnualForm()">&times;</button></div>' +
+            '<div class="modal-body">' +
+            '<div class="form-group"><label>项目名称</label><input type="text" id="annualName" placeholder="如：车险、物业费"></div>' +
+            '<div class="form-group"><label>金额（元）</label><input type="number" id="annualAmount" step="0.01" min="0" placeholder="0.00"></div>' +
+            '<div class="form-group"><button class="btn-submit" onclick="app.saveAnnual()">确认</button></div>' +
+            '</div>';
         document.getElementById('annualModal').style.display = 'flex';
     }
     closeAnnualForm() { document.getElementById('annualModal').style.display = 'none'; }
