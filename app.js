@@ -360,7 +360,7 @@ class AccountingApp {
     // 渲染今日记录
     renderTodayRecords() {
         const today = new Date().toISOString().split('T')[0];
-        const todayRecords = this.records.filter(r => r.date === today);
+        const todayRecords = this.records.filter(r => r.date && r.date === today);
         
         const container = document.getElementById('todayRecords');
         
@@ -408,7 +408,7 @@ class AccountingApp {
     // 更新统计信息
     updateStatistics() {
         const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-        const monthRecords = this.records.filter(r => r.date.startsWith(currentMonth));
+        const monthRecords = this.records.filter(r => r.date && r.date.startsWith(currentMonth));
         
         const monthExpense = monthRecords
             .filter(r => r.type === '支出')
@@ -642,7 +642,7 @@ class AccountingApp {
         let budget = this.budgets[currentMonth] || this.budgets.default || 0;
         
         // 计算当月已用预算（总支出）
-        const monthRecords = this.records.filter(r => r.date.startsWith(currentMonth));
+        const monthRecords = this.records.filter(r => r.date && r.date.startsWith(currentMonth));
         const usedBudget = monthRecords
             .filter(r => r.type === '支出')
             .reduce((sum, r) => sum + r.amount, 0);
@@ -782,7 +782,7 @@ class AccountingApp {
     }
 
     // 从JSON文件导入数据
-    importFromJSON() {
+        importFromJSON() {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
@@ -792,32 +792,37 @@ class AccountingApp {
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
-                    const importedRecords = JSON.parse(event.target.result);
-                    if (!Array.isArray(importedRecords) || importedRecords.length === 0) {
-                        this.showToast('❌ 文件格式错误：需要JSON数组', 'error');
+                    const raw = JSON.parse(event.target.result);
+                    if (!Array.isArray(raw) || raw.length === 0) {
+                        this.showToast('文件格式错误', 'error');
                         return;
                     }
-                    // 为导入的记录生成新ID
-                    for (const r of importedRecords) {
-                        r.id = Date.now() + Math.floor(Math.random() * 100000);
-                        r.timestamp = new Date().toISOString();
-                    }
+                    const importedRecords = raw
+                        .filter(r => r.date && r.type && r.category && r.amount != null)
+                        .map(r => ({
+                            id: Date.now() + Math.floor(Math.random() * 100000),
+                            date: String(r.date).slice(0, 10),
+                            type: r.type,
+                            category: r.category,
+                            amount: parseFloat(r.amount),
+                            note: String(r.note || ''),
+                            timestamp: new Date().toISOString()
+                        }));
                     this.records = this.records.concat(importedRecords);
                     this.persistData();
                     this.renderTodayRecords();
                     this.updateStatistics();
                     this.updateBudgetDisplay();
-                    this.showToast('📂 数据导入成功！' + importedRecords.length + '条', 'success');
+                    this.showToast('导入成功 ' + importedRecords.length + '条', 'success');
                 } catch (error) {
                     console.error('导入错误:', error);
-                    this.showToast('❌ 导入失败：' + error.message, 'error');
+                    this.showToast('导入失败: ' + error.message, 'error');
                 }
             };
             reader.readAsText(file);
         };
         input.click();
-    }
-}
+    }}
 
 // 初始化应用
 let app;
