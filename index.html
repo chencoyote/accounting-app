@@ -150,16 +150,16 @@
                         </div>
                         <div class="monthly-summary" id="monthlySummary" style="display:none;">
                             <div class="summary-item">
+                                <span class="label">月度预算：</span>
+                                <span class="amount" id="detailBudget">¥0.00</span>
+                            </div>
+                            <div class="summary-item">
                                 <span class="label">总支出：</span>
                                 <span class="amount expense" id="detailExpense">¥0.00</span>
                             </div>
                             <div class="summary-item">
-                                <span class="label">总收入：</span>
-                                <span class="amount income" id="detailIncome">¥0.00</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="label">结余：</span>
-                                <span class="amount" id="detailBalance">¥0.00</span>
+                                <span class="label">预算剩余：</span>
+                                <span class="amount" id="detailRemaining">¥0.00</span>
                             </div>
                         </div>
                         <div class="category-stats" id="categoryStats" style="display:none;">
@@ -171,25 +171,32 @@
                 </div>
             </div>
 
-            <!-- 标签页3：数据统计 -->
-            <div class="tab-pane" id="tabStats">
+            <!-- 标签页3：收入 -->
+            <div class="tab-pane" id="tabIncome">
                 <div class="card">
                     <div class="card-header">
-                        <h2>📈 本月统计</h2>
+                        <h2>💰 收入记录</h2>
                     </div>
                     <div class="card-body">
-                        <div class="stats">
-                            <div class="stat-item">
-                                <span class="stat-label">本月支出</span>
-                                <span class="stat-value expense" id="monthExpense">¥0.00</span>
+                        <div class="form-group">
+                            <label for="incomeMonth">📅 选择月份</label>
+                            <input type="month" id="incomeMonth" name="incomeMonth">
+                        </div>
+                        <div id="incomeRecords">
+                            <p class="empty-message">请选择月份查看收入</p>
+                        </div>
+                        <div class="summary" id="incomeSummary" style="display:none;">
+                            <div class="summary-item">
+                                <span class="label">本月总收入：</span>
+                                <span class="amount income" id="incomeTotal">¥0.00</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">本月收入</span>
-                                <span class="stat-value income" id="monthIncome">¥0.00</span>
+                            <div class="summary-item">
+                                <span class="label">总支出：</span>
+                                <span class="amount expense" id="incomeExpense">¥0.00</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">结余</span>
-                                <span class="stat-value" id="monthBalance">¥0.00</span>
+                            <div class="summary-item">
+                                <span class="label">结余：</span>
+                                <span class="amount" id="incomeBalance">¥0.00</span>
                             </div>
                         </div>
                     </div>
@@ -225,16 +232,16 @@
         <!-- 底部：标签页导航 -->
         <nav class="tab-nav">
             <button class="tab-btn active" data-tab="tabToday">
-                <span class="tab-icon">📊</span>
-                <span class="tab-text">今日</span>
+                <span class="tab-icon">📝</span>
+                <span class="tab-text">记账</span>
             </button>
             <button class="tab-btn" data-tab="tabMonthly">
                 <span class="tab-icon">📅</span>
                 <span class="tab-text">月度</span>
             </button>
-            <button class="tab-btn" data-tab="tabStats">
-                <span class="tab-icon">📈</span>
-                <span class="tab-text">统计</span>
+            <button class="tab-btn" data-tab="tabIncome">
+                <span class="tab-icon">💰</span>
+                <span class="tab-text">收入</span>
             </button>
             <button class="tab-btn" data-tab="tabSettings">
                 <span class="tab-icon">⚙️</span>

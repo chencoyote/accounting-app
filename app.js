@@ -101,9 +101,12 @@ class AccountingApp {
         // 如果切换到月度明细标签，自动查询当前月
         if (tabId === 'tabMonthly') {
             const queryMonth = document.getElementById('queryMonth').value;
-            if (queryMonth) {
-                this.queryMonthlyDetail(queryMonth);
-            }
+            if (queryMonth) this.queryMonthlyDetail(queryMonth);
+        }
+        // 切换到收入标签，自动加载
+        if (tabId === 'tabIncome') {
+            const incomeMonth = document.getElementById('incomeMonth').value;
+            if (incomeMonth) this.loadIncomeRecords(incomeMonth);
         }
     }
 
@@ -140,16 +143,24 @@ class AccountingApp {
 
     // 绑定查询事件
     bindQueryEvent() {
+        // 月度明细月份选择
         const queryMonthInput = document.getElementById('queryMonth');
         if (queryMonthInput) {
-            // 设置默认值为当前月
             const now = new Date();
             const currentMonth = now.toISOString().slice(0, 7);
             queryMonthInput.value = currentMonth;
-            
-            // 监听月份选择变化
             queryMonthInput.addEventListener('change', (e) => {
                 this.queryMonthlyDetail(e.target.value);
+            });
+        }
+
+        // 收入记录月份选择
+        const incomeMonthInput = document.getElementById('incomeMonth');
+        if (incomeMonthInput) {
+            const now = new Date();
+            incomeMonthInput.value = now.toISOString().slice(0, 7);
+            incomeMonthInput.addEventListener('change', (e) => {
+                this.loadIncomeRecords(e.target.value);
             });
         }
     }
@@ -421,28 +432,46 @@ class AccountingApp {
         `;
     }
 
-    // 更新统计信息
-    updateStatistics() {
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-        const monthRecords = this.records.filter(r => r.date && r.date.startsWith(currentMonth));
+    // 加载收入记录
+    loadIncomeRecords(month) {
+        if (!month) return;
         
-        const monthExpense = monthRecords
-            .filter(r => r.type === '支出')
-            .reduce((sum, r) => sum + r.amount, 0);
+        const incomeRecords = this.records
+            .filter(r => r.date.startsWith(month) && r.type === '收入')
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        const monthIncome = monthRecords
-            .filter(r => r.type === '收入')
-            .reduce((sum, r) => sum + r.amount, 0);
-        
-        const balance = monthIncome - monthExpense;
+        const expenseRecords = this.records
+            .filter(r => r.date.startsWith(month) && r.type === '支出');
 
-        document.getElementById('monthExpense').textContent = `¥${monthExpense.toFixed(2)}`;
-        document.getElementById('monthIncome').textContent = `¥${monthIncome.toFixed(2)}`;
+        const container = document.getElementById('incomeRecords');
+        const summaryDiv = document.getElementById('incomeSummary');
         
-        const balanceElement = document.getElementById('monthBalance');
-        balanceElement.textContent = `¥${balance.toFixed(2)}`;
-        balanceElement.className = `stat-value ${balance >= 0 ? 'income' : 'expense'}`;
+        if (incomeRecords.length === 0) {
+            container.innerHTML = '<p class="empty-message">该月没有收入记录</p>';
+            summaryDiv.style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = this.buildTable(incomeRecords, true, false);
+
+        const totalIncome = incomeRecords.reduce((s, r) => s + r.amount, 0);
+        const totalExpense = expenseRecords.reduce((s, r) => s + r.amount, 0);
+        const balance = totalIncome - totalExpense;
+
+        document.getElementById('incomeTotal').textContent = `¥${totalIncome.toFixed(2)}`;
+        document.getElementById('incomeExpense').textContent = `¥${totalExpense.toFixed(2)}`;
+        const balEl = document.getElementById('incomeBalance');
+        balEl.textContent = `¥${balance.toFixed(2)}`;
+        balEl.className = `amount ${balance >= 0 ? 'income' : 'expense'}`;
+        summaryDiv.style.display = 'block';
     }
+
+    // 更新统计信息（顶部概览用）
+    updateStatistics() {
+        this.updateBudgetDisplay();
+    }
+
+    // ===== 以下是原有的辅助方法 =====
 
     // 查询月度明细
     queryMonthlyDetail(month) {
@@ -474,18 +503,16 @@ class AccountingApp {
             .filter(r => r.type === '支出')
             .reduce((sum, r) => sum + r.amount, 0);
         
-        const monthIncome = monthRecords
-            .filter(r => r.type === '收入')
-            .reduce((sum, r) => sum + r.amount, 0);
-        
-        const balance = monthIncome - monthExpense;
+        // 获取当月预算
+        const budget = this.budgets[month] || this.budgets.default || 0;
+        const remaining = budget - monthExpense;
 
+        document.getElementById('detailBudget').textContent = `¥${budget.toFixed(2)}`;
         document.getElementById('detailExpense').textContent = `¥${monthExpense.toFixed(2)}`;
-        document.getElementById('detailIncome').textContent = `¥${monthIncome.toFixed(2)}`;
         
-        const balanceElement = document.getElementById('detailBalance');
-        balanceElement.textContent = `¥${balance.toFixed(2)}`;
-        balanceElement.className = `amount ${balance >= 0 ? 'income' : 'expense'}`;
+        const remEl = document.getElementById('detailRemaining');
+        remEl.textContent = `¥${remaining.toFixed(2)}`;
+        remEl.className = `amount ${remaining >= 0 ? 'income' : 'expense'}`;
         
         summaryDiv.style.display = 'block';
         
