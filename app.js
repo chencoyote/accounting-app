@@ -799,8 +799,8 @@ class AccountingApp {
                     }
                     const importedRecords = raw
                         .filter(r => r.date && r.type && r.category && r.amount != null)
-                        .map(r => ({
-                            id: Date.now() + Math.floor(Math.random() * 100000),
+                        .map((r, i) => ({
+                            id: Date.now() * 1000 + i,
                             date: String(r.date).slice(0, 10),
                             type: r.type,
                             category: r.category,
