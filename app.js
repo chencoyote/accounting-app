@@ -722,7 +722,7 @@ class AccountingApp {
     // 同步数据到云端
     async syncToCloud() {
         // 导出所有记录到云端
-        const { data: existingRecords } = await supabase
+        const { data: existingRecords } = await window._supabase
             .from('records')
             .select('id');
         
