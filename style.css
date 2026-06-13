@@ -614,3 +614,38 @@ textarea {
         text-align: left;
     }
 }
+
+
+/* 资产管理 */
+.asset-list { display: flex; flex-direction: column; gap: 12px; }
+
+.asset-item {
+    padding: 14px;
+    background: #F8F9FA;
+    border-radius: 10px;
+    border-left: 4px solid #4472C4;
+}
+
+.asset-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.asset-name { font-size: 15px; font-weight: 600; color: #2C3E50; }
+.asset-balance { font-size: 20px; font-weight: 700; color: #4472C4; }
+.asset-actions { display: flex; gap: 8px; }
+
+.btn-asset {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-deposit { background: #E8F5E9; color: #388E3C; }
+.btn-withdraw { background: #FFEBEE; color: #E74C3C; }

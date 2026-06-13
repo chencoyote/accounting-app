@@ -18,6 +18,7 @@ class AccountingApp {
         this.renderTodayRecords();
         this.updateStatistics();
         this.updateBudgetDisplay();
+        this.renderAssets();
     }
 
     // 加载所有数据
@@ -107,6 +108,10 @@ class AccountingApp {
         if (tabId === 'tabIncome') {
             const incomeMonth = document.getElementById('incomeMonth').value;
             if (incomeMonth) this.loadIncomeRecords(incomeMonth);
+        }
+        // 切换到资产标签，渲染资产
+        if (tabId === 'tabAssets') {
+            this.renderAssets();
         }
     }
 
@@ -683,6 +688,109 @@ class AccountingApp {
         } else {
             progressBar.style.background = 'linear-gradient(90deg, #70AD47, #8BC34A)';
         }
+    }
+
+
+    // ===== 资产管理 =====
+    loadAssets() {
+        const data = localStorage.getItem('assetData');
+        return data ? JSON.parse(data) : { 固定存款: 0, 备用金: 0, 外借款: 0 };
+    }
+    saveAssets(d) { localStorage.setItem('assetData', JSON.stringify(d)); }
+
+    loadAssetRecords() {
+        const data = localStorage.getItem('assetRecords');
+        return data ? JSON.parse(data) : [];
+    }
+    saveAssetRecords(r) { localStorage.setItem('assetRecords', JSON.stringify(r)); }
+
+    importAssets() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (data.assets) {
+                        const existing = this.loadAssets();
+                        for (const [k, v] of Object.entries(data.assets)) {
+                            if (!existing[k]) existing[k] = v;
+                        }
+                        this.saveAssets(existing);
+                    }
+                    if (data.records && data.records.length > 0) {
+                        const recs = this.loadAssetRecords();
+                        this.saveAssetRecords(data.records.concat(recs));
+                    }
+                    this.renderAssets();
+                    this.showToast('asset imported', 'success');
+                } catch (err) { this.showToast('import failed', 'error'); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+
+    showAssetModal(name, action) {
+        this._assetName = name;
+        this._assetAction = action;
+        document.getElementById('assetModalTitle').textContent = action + ' - ' + name;
+        document.getElementById('assetAmount').value = '';
+        document.getElementById('assetNote').value = '';
+        document.getElementById('assetModal').style.display = 'flex';
+    }
+
+    closeAssetModal() {
+        document.getElementById('assetModal').style.display = 'none';
+    }
+
+    saveAsset() {
+        const amt = parseFloat(document.getElementById('assetAmount').value);
+        const note = document.getElementById('assetNote').value.trim();
+        if (!amt || amt <= 0) { this.showToast('请输入金额', 'error'); return; }
+
+        const assets = this.loadAssets();
+        const isAdd = ['存入', '补充', '借出'].includes(this._assetAction);
+        const change = isAdd ? amt : -amt;
+        assets[this._assetName] = (assets[this._assetName] || 0) + change;
+        this.saveAssets(assets);
+
+        const records = this.loadAssetRecords();
+        records.unshift({
+            date: new Date().toISOString().slice(0, 10),
+            name: this._assetName,
+            action: this._assetAction,
+            amount: amt,
+            note: note,
+            balance: assets[this._assetName]
+        });
+        this.saveAssetRecords(records);
+
+        this.closeAssetModal();
+        this.renderAssets();
+        this.showToast('已' + this._assetAction + ' ¥' + amt.toFixed(2), 'success');
+    }
+
+    renderAssets() {
+        const assets = this.loadAssets();
+        document.getElementById('assetFixed').textContent = '¥' + (assets['固定存款'] || 0).toFixed(2);
+        document.getElementById('assetReserve').textContent = '¥' + (assets['备用金'] || 0).toFixed(2);
+        document.getElementById('assetLoan').textContent = '¥' + (assets['外借款'] || 0).toFixed(2);
+
+        const records = this.loadAssetRecords();
+        const container = document.getElementById('assetRecords');
+        if (records.length === 0) {
+            container.innerHTML = '<p class="empty-message">暂无记录</p>';
+            return;
+        }
+        container.innerHTML = '<table class="record-table"><thead><tr><th>日期</th><th>资产</th><th>操作</th><th>金额</th><th>备注</th><th>余额</th></tr></thead><tbody>' +
+            records.slice(0, 50).map(r => '<tr class="record-row"><td>' + r.date.slice(5) + '</td><td>' + r.name + '</td><td>' + r.action + '</td><td>' + r.amount.toFixed(2) + '</td><td>' + (r.note || '') + '</td><td>' + r.balance.toFixed(2) + '</td></tr>').join('') +
+            '</tbody></table>';
     }
 
     // 显示Toast提示

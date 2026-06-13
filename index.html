@@ -220,7 +220,64 @@
                 </div>
             </div>
 
-            <!-- 标签页4：设置 -->
+            <!-- 标签页4：资产管理 -->
+            <div class="tab-pane" id="tabAssets">
+                <!-- 余额看板 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>🏦 资产总览</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="asset-list">
+                            <div class="asset-item">
+                                <div class="asset-info">
+                                    <span class="asset-name">💳 固定存款</span>
+                                    <span class="asset-balance" id="assetFixed">¥0.00</span>
+                                </div>
+                                <div class="asset-actions">
+                                    <button class="btn-asset btn-deposit" onclick="app.showAssetModal('固定存款', '存入')">+ 存入</button>
+                                    <button class="btn-asset btn-withdraw" onclick="app.showAssetModal('固定存款', '取出')">- 取出</button>
+                                </div>
+                            </div>
+                            <div class="asset-item">
+                                <div class="asset-info">
+                                    <span class="asset-name">💰 备用金</span>
+                                    <span class="asset-balance" id="assetReserve">¥0.00</span>
+                                </div>
+                                <div class="asset-actions">
+                                    <button class="btn-asset btn-deposit" onclick="app.showAssetModal('备用金', '补充')">+ 补充</button>
+                                    <button class="btn-asset btn-withdraw" onclick="app.showAssetModal('备用金', '使用')">- 使用</button>
+                                </div>
+                            </div>
+                            <div class="asset-item">
+                                <div class="asset-info">
+                                    <span class="asset-name">🤝 外借款</span>
+                                    <span class="asset-balance" id="assetLoan">¥0.00</span>
+                                </div>
+                                <div class="asset-actions">
+                                    <button class="btn-asset btn-deposit" onclick="app.showAssetModal('外借款', '借出')">+ 借出</button>
+                                    <button class="btn-asset btn-withdraw" onclick="app.showAssetModal('外借款', '收回')">- 收回</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 备用金使用记录 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 变动记录</h2>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn-settings" onclick="app.importAssets()" style="margin-bottom:12px;">📂 导入资产数据</button>
+                        <div id="assetRecords">
+                            <p class="empty-message">暂无记录</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签页5：设置 -->
             <div class="tab-pane" id="tabSettings">
                 <div class="card">
                     <div class="card-header">
@@ -260,6 +317,10 @@
                 <span class="tab-icon">💰</span>
                 <span class="tab-text">收入</span>
             </button>
+            <button class="tab-btn" data-tab="tabAssets">
+                <span class="tab-icon">🏦</span>
+                <span class="tab-text">资产</span>
+            </button>
             <button class="tab-btn" data-tab="tabSettings">
                 <span class="tab-icon">⚙️</span>
                 <span class="tab-text">设置</span>
@@ -295,6 +356,29 @@
                 <div class="form-group">
                     <button type="button" class="btn-submit" onclick="app.saveBudget()">✅ 保存预算</button>
                     <button type="button" class="btn-settings" onclick="app.resetMonthBudget()" style="margin-top: 10px;">🔄 重置本月预算</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 资产操作弹窗 -->
+    <div id="assetModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="assetModalTitle">💰 操作</h2>
+                <button class="modal-close" onclick="app.closeAssetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="assetAmount">金额（元）</label>
+                    <input type="number" id="assetAmount" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="assetNote">用途 / 备注</label>
+                    <input type="text" id="assetNote" placeholder="如：猫粮">
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn-submit" onclick="app.saveAsset()">✅ 确认</button>
                 </div>
             </div>
         </div>
