@@ -841,7 +841,41 @@ class AccountingApp {
     toggleAnnual(id) {
         const list = this.loadAnnual();
         const item = list.find(x => x.id === id);
-        if (item) { item.paid = !item.paid; localStorage.setItem('annualExpenses', JSON.stringify(list)); this.renderAnnual(); }
+        if (!item) return;
+        if (item.paid) {
+            // 取消支付，退回资产
+            if (item.source) {
+                const assets = this.loadAssets();
+                assets[item.source] = (assets[item.source] || 0) + item.amount;
+                this.saveAssets(assets);
+            }
+            item.paid = false; item.source = null; item.date = null;
+            localStorage.setItem('annualExpenses', JSON.stringify(list));
+            this.renderAnnual(); this.renderAssets();
+            this.showToast('已取消支付', 'info');
+        } else {
+            const src = prompt('支付来源：\n1=备用金  2=固定存款\n请输入1或2：');
+            if (src === '1') this.payThis(item, '备用金');
+            else if (src === '2') this.payThis(item, '固定存款');
+            else if (src) this.showToast('请输入1或2', 'error');
+        }
+    }
+
+    payThis(item, source) {
+        const assets = this.loadAssets();
+        const cur = assets[source] || 0;
+        if (cur < item.amount) {
+            this.showToast(source + '余额不足(剩余' + cur.toFixed(2) + ')', 'error');
+            return;
+        }
+        assets[source] = cur - item.amount;
+        this.saveAssets(assets);
+        const list = this.loadAnnual();
+        const it = list.find(x => x.id === item.id);
+        if (it) { it.paid = true; it.source = source; it.date = new Date().toISOString().slice(0,10); }
+        localStorage.setItem('annualExpenses', JSON.stringify(list));
+        this.renderAnnual(); this.renderAssets();
+        this.showToast(source + '支付 ' + item.amount.toFixed(2), 'success');
     }
 
     deleteAnnual(id) {
