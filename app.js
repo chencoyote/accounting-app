@@ -720,41 +720,29 @@ class AccountingApp {
     }
 
     // 同步数据到云端
-    async syncToCloud() {
-        // 导出所有记录到云端
-        const { data: existingRecords } = await window._supabase
-            .from('records')
-            .select('id');
-        
-        const existingIds = new Set((existingRecords || []).map(r => r.id));
-        
-        // 删除云端多余的记录
-        for (const id of existingIds) {
-            if (!this.records.find(r => r.id === id)) {
-                await window._supabase.from('records').delete().eq('id', id);
+        async syncToCloud() {
+        const BATCH_SIZE = 80;
+
+        // 1. 清除云端旧数据
+        const { data: old } = await window._supabase.from('records').select('id');
+        if (old && old.length > 0) {
+            const ids = old.map(r => r.id);
+            for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+                await window._supabase.from('records').delete().in('id', ids.slice(i, i + BATCH_SIZE));
             }
         }
 
-        // 插入或更新记录
-        for (const record of this.records) {
-            if (existingIds.has(record.id)) {
-                await window._supabase.from('records').update(record).eq('id', record.id);
-            } else {
-                await window._supabase.from('records').insert(record);
+        // 2. 批量插入新数据
+        if (this.records.length > 0) {
+            for (let i = 0; i < this.records.length; i += BATCH_SIZE) {
+                await window._supabase.from('records').insert(this.records.slice(i, i + BATCH_SIZE));
             }
         }
 
-        // 同步预算
+        // 3. 同步预算
         await window._supabase.from('budgets').delete().neq('month', '__none__');
-        
-        const budgetEntries = Object.entries(this.budgets).map(([month, amount]) => ({
-            month,
-            amount
-        }));
-        
-        if (budgetEntries.length > 0) {
-            await window._supabase.from('budgets').insert(budgetEntries);
-        }
+        const entries = Object.entries(this.budgets).map(([m, a]) => ({ month: m, amount: a }));
+        if (entries.length > 0) await window._supabase.from('budgets').insert(entries);
     }
 
     // 保存记录到本地
